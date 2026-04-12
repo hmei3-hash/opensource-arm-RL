@@ -1,28 +1,78 @@
-# opensource-arm-RL
-Project Overview
+# SO-ARM100 Reinforcement Learning
 
-This project focuses on applying reinforcement learning (RL) to control a 6-DOF robotic arm based on the open-source SO101 model. The goal is to enable the robot to learn task-oriented behaviors such as approaching and interacting with objects through carefully designed action and reward spaces.
+Reinforcement learning for a 6-DOF robotic arm ([SO-ARM100](https://github.com/TheRobotStudio/SO-ARM100)) using PPO in PyBullet simulation.
 
-Methodology
-Action Space Design
-Defined a continuous action space corresponding to the 6 joint controls of the robotic arm, enabling smooth and precise motion control.
-Reward Function Engineering
-Designed task-specific reward functions to guide learning objectives, including:
-Minimizing distance between end-effector and target object
-Encouraging stable and efficient motion
-Penalizing unnecessary movements or instability
-Model Training
-Leveraged existing pretrained models and fine-tuned them using reinforcement learning to improve task performance and convergence speed.
-Current Progress
-Implemented RL framework for robotic arm control
-Defined action space and initial reward structures
-Integrated and fine-tuned existing models for task-specific training
-Achieved preliminary results for target-reaching behavior
-Future Work
-Improve reward shaping for more complex tasks (e.g., grasping, manipulation)
-Optimize training stability and sample efficiency
-Integrate perception (vision system) for real-world interaction
-Deploy on physical robotic arm hardware
-Status
+The training is split into two curriculum phases:
 
-🚧 Currently under active development
+| Phase | Objective | Action dim | Obs dim |
+|-------|-----------|-----------|---------|
+| **1 — Reaching** | Move end-effector to target | 6 joints | 15 |
+| **2 — Press-down** | Align XY then press onto target | 5 joints | 14 |
+
+## Repository structure
+
+```
+├── assets/              # URDF & mesh files (place so_arm100.urdf here)
+├── configs/train.yaml   # Hyperparameter defaults
+├── envs/                # Gymnasium environments
+│   ├── base_env.py      #   Shared simulation logic
+│   ├── phase1_env.py    #   Phase 1: 6-joint reaching
+│   └── phase2_env.py    #   Phase 2: 5-joint press-down
+├── models/              # Saved model checkpoints
+├── scripts/
+│   ├── train.py         # Training CLI
+│   └── evaluate.py      # Inference / visualization CLI
+├── requirements.txt
+└── README.md
+```
+
+## Quick start
+
+```bash
+# 1. Install dependencies
+pip install -r requirements.txt
+
+# 2. Place your URDF
+cp /path/to/so_arm100.urdf assets/
+
+# 3. Train Phase 1 (headless)
+python scripts/train.py --phase 1 --timesteps 300000
+
+# 4. Train Phase 2 (fine-tune from Phase 1)
+python scripts/train.py --phase 2 --pretrained models/arm_phase1_model.zip
+
+# 5. Visualize results
+python scripts/evaluate.py --model models/arm_phase2_model.zip --phase 2
+```
+
+## Configuration
+
+You can override any setting via CLI flags:
+
+```bash
+python scripts/train.py --phase 1 \
+    --lr 1e-3 \
+    --timesteps 500000 \
+    --render human \
+    --randomize-target \
+    --urdf /custom/path/arm.urdf \
+    --log-dir ./my_logs/
+```
+
+Or set the URDF path globally: `export ARM_URDF_PATH=/path/to/so_arm100.urdf`
+
+TensorBoard logs are written to `./logs/` by default:
+
+```bash
+tensorboard --logdir logs/
+```
+
+## Reward design
+
+**Phase 1** combines distance shaping (`−5·d`), a progress bonus for getting closer, orientation alignment, and a small action penalty. Success threshold: distance < 4 cm.
+
+**Phase 2** keeps XY accuracy from Phase 1 and adds a gated z-press reward that only activates once XY error < 2 cm, encouraging the arm to approach from above then push down. Success: XY < 2 cm and z-gap < 1.5 cm.
+
+## Status
+
+🚧 Under active development — contributions and issues welcome.

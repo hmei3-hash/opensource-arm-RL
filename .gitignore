@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+
+# Training artifacts
+logs/
+ppo_arm_*/
+*.monitor.csv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Keep model directory but ignore large zip files during dev
+# (uncomment the line below if you don't want to track models in git)
+# models/*.zip
